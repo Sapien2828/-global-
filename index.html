@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>災害訓練シミュレーション（震度7強・夜勤想定）</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="start-screen" class="screen active">
+        <div class="start-content">
+            <h1>災害訓練シミュレーション</h1>
+            <p class="subtitle">震度7強発生 / 夜勤帯ワンオペ想定</p>
+            <div class="menu-buttons">
+                <button onclick="startGame()" class="btn-primary">ゲームを始める</button>
+                <button onclick="showHistory()" class="btn-secondary">過去の記録を見る</button>
+                <button onclick="exportCSV()" class="btn-admin">管理者モード（CSV出力）</button>
+            </div>
+            <p class="notice">※開始すると経過時間がカウントされます</p>
+        </div>
+    </div>
+
+    <div id="game-screen" class="screen">
+        <div id="header-info">
+            <button onclick="returnToTitle()" class="btn-small">タイトルへ戻る</button>
+            <span class="timer">経過時間: <span id="total-time">0</span>分</span>
+        </div>
+        <div id="map-container">
+            <img src="map.png" alt="病院マップ" id="hospital-map"> 
+            </div>
+    </div>
+
+    <div id="history-screen" class="screen">
+        <div class="history-header">
+            <h2>過去の活動記録</h2>
+            <button onclick="returnToTitle()" class="btn-small">戻る</button>
+        </div>
+        <div id="history-list">
+            </div>
+    </div>
+
+    <div id="overlay" class="overlay" style="display:none;">
+        </div>
+
+    <script src="main.js"></script>
+</body>
+</html>

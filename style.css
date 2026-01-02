@@ -1,0 +1,172 @@
+@charset "UTF-8";
+
+body {
+    margin: 0;
+    font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+    background-color: #f4f4f4;
+    overflow: hidden; /* アプリっぽくスクロールを制限 */
+}
+
+/* 画面切り替え制御 */
+.screen {
+    display: none;
+    width: 100vw;
+    height: 100vh;
+    position: absolute;
+    top: 0;
+    left: 0;
+    background: #fff;
+}
+
+.screen.active {
+    display: block;
+}
+
+/* ボタン共通スタイル */
+button {
+    cursor: pointer;
+    font-size: 16px;
+    border: none;
+    border-radius: 5px;
+    transition: opacity 0.2s;
+}
+button:hover { opacity: 0.8; }
+button:active { transform: scale(0.98); }
+
+/* スタート画面 */
+#start-screen {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    color: white;
+    text-align: center;
+}
+
+.start-content h1 { margin-bottom: 10px; font-size: 2.5rem; }
+.subtitle { margin-bottom: 40px; font-size: 1.2rem; opacity: 0.9; }
+
+.menu-buttons button {
+    display: block;
+    width: 280px;
+    padding: 15px;
+    margin: 15px auto;
+    font-weight: bold;
+}
+
+.btn-primary { background-color: #e74c3c; color: white; font-size: 1.2rem; }
+.btn-secondary { background-color: #fff; color: #333; }
+.btn-admin { background-color: #34495e; color: #ccc; font-size: 0.9rem; }
+
+/* ゲーム画面ヘッダー */
+#header-info {
+    height: 50px;
+    background-color: #333;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 15px;
+    z-index: 100;
+    position: relative;
+}
+
+.timer { font-size: 1.2rem; font-weight: bold; color: #f1c40f; }
+.btn-small { padding: 5px 10px; font-size: 0.9rem; }
+
+/* マップエリア */
+#map-container {
+    width: 100%;
+    height: calc(100vh - 50px);
+    overflow: auto; /* 地図が大きい場合はスクロール */
+    position: relative;
+    background-color: #ddd;
+}
+
+#hospital-map {
+    /* 画像サイズそのままで表示（ピン位置ズレ防止） */
+    display: block;
+}
+
+/* ピンのデザイン */
+.pin {
+    position: absolute;
+    border-radius: 50%;
+    background-color: rgba(231, 76, 60, 0.6);
+    border: 2px solid #c0392b;
+    cursor: pointer;
+    transform: translate(-50%, -50%); /* 中心基準 */
+    z-index: 10;
+    box-shadow: 0 0 10px rgba(255,0,0,0.5);
+    animation: pulse 2s infinite;
+}
+.pin:hover {
+    background-color: rgba(231, 76, 60, 0.9);
+    z-index: 20;
+    transform: translate(-50%, -50%) scale(1.2);
+}
+
+@keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(231, 76, 60, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(231, 76, 60, 0); }
+}
+
+/* 履歴画面 */
+#history-screen { padding: 20px; box-sizing: border-box; overflow-y: auto; }
+.history-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #ddd; padding-bottom: 10px; margin-bottom: 20px; }
+#history-list ul { list-style: none; padding: 0; }
+#history-list li {
+    background: #f9f9f9;
+    border-left: 5px solid #2a5298;
+    margin-bottom: 10px;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+/* モーダル */
+.overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.modal-body {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    max-width: 600px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+}
+
+.modal-body h2, .modal-body h3 { border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 0; }
+.select-btn {
+    width: 100%;
+    padding: 15px;
+    margin: 8px 0;
+    text-align: left;
+    background-color: #f8f9fa;
+    border: 1px solid #ddd;
+}
+.select-btn:hover { background-color: #e2e6ea; border-color: #adb5bd; }
+.phase-label { font-weight: bold; color: #2a5298; margin-right: 10px; }
+.choice-btn {
+    display: block;
+    width: 100%;
+    margin: 10px 0;
+    padding: 15px;
+    background-color: #3498db;
+    color: white;
+    font-weight: bold;
+    text-align: center;
+}
+.choice-btn:hover { background-color: #2980b9; }
+.close-btn { background-color: #95a5a6; color: white; padding: 10px 20px; float: right; }
