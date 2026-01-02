@@ -1,8 +1,8 @@
 /* =========================================
-   災害訓練シミュレーション main.js (時間制限機能付き)
+   災害訓練シミュレーション main.js (機能強化版)
    ========================================= */
 
-// ★GASのURL（そのまま残します）
+// ★GASのURL
 const GAS_URL = "https://script.google.com/macros/s/AKfycbxiT-TRcY5vZC0eJ3F6fJa8hrtigaeai5wOQOkFRN1syy61Sa9KxjS6dS5dCLsf3LBj/exec"; 
 
 // グローバル変数
@@ -11,16 +11,15 @@ window.currentSessionLog = [];
 window.totalTime = 0; 
 const TIME_LIMIT = 30; // 制限時間（分）
 
+// ==========================================
 // 1. 起動とデータ読み込み
+// ==========================================
 document.addEventListener('DOMContentLoaded', function() {
     console.log("① プログラム起動");
     
     fetch('data.csv')
         .then(response => {
-            if (!response.ok) {
-                alert("【エラー】data.csv が見つかりません。");
-                throw new Error("HTTP error " + response.status);
-            }
+            if (!response.ok) throw new Error("HTTP error " + response.status);
             return response.text();
         })
         .then(text => {
@@ -37,14 +36,16 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 });
 
+// ==========================================
 // 2. ゲーム開始ボタン
+// ==========================================
 window.startGame = function() {
-    // データチェック
     if (!window.globalEventData || window.globalEventData.length === 0) {
         alert("データ読み込み中です。少々お待ちください。");
         return;
     }
 
+    // リセット処理
     window.currentSessionLog = [];
     window.totalTime = 0;
     
@@ -52,21 +53,25 @@ window.startGame = function() {
     const timeEl = document.getElementById('total-time');
     if(timeEl) {
         timeEl.innerText = "0";
-        timeEl.style.color = "white"; // 色を戻す
+        timeEl.style.color = "white"; 
+        timeEl.style.fontWeight = "normal";
     }
     
     // 画面切り替え
-    document.getElementById('start-screen').classList.remove('active');
-    document.getElementById('history-screen').classList.remove('active'); // 念のため
-    document.getElementById('game-screen').classList.add('active');
+    switchScreen('game-screen');
 
     // マップ初期化
     initMap(window.globalEventData);
 };
 
+// ==========================================
 // 3. マップ描画
+// ==========================================
 function initMap(data) {
     const mapContainer = document.getElementById('map-container');
+    if(!mapContainer) return;
+
+    // ピンをリセットして画像を再配置
     mapContainer.innerHTML = '<img src="map.png" alt="病院マップ" id="hospital-map">';
 
     const groupedData = {};
@@ -90,13 +95,17 @@ function initMap(data) {
         pin.style.height = (roomInfo.radius * 2 || 20) + 'px';
         pin.title = roomInfo['部屋名'];
 
+        // ピンクリックイベント
         pin.addEventListener('click', (e) => {
             e.stopPropagation();
-            // ★時間切れならクリック無効
+            
+            // ★チェック：すでに制限時間を超えていたら操作させない
             if (window.totalTime >= TIME_LIMIT) {
-                alert("【終了】制限時間を超えているため操作できません。");
+                alert("【終了】制限時間を超えているため、これ以上の操作はできません。\n「過去の記録を見る」へ移動します。");
+                showHistory();
                 return;
             }
+
             showEventListModal(roomInfo['部屋名'], events);
         });
 
@@ -104,7 +113,9 @@ function initMap(data) {
     });
 }
 
-// 4. イベントリスト表示
+// ==========================================
+// 4. イベントリスト表示（回答済みチェック機能付き）
+// ==========================================
 function showEventListModal(roomName, events) {
     events.sort((a, b) => (a['イベント順序'] || 0) - (b['イベント順序'] || 0));
     
@@ -114,18 +125,46 @@ function showEventListModal(roomName, events) {
             <p>確認する状況を選択してください。</p>`;
     
     events.forEach(evt => {
-        html += `
-            <button class="select-btn" onclick="startScenario(${evt.No}, ${evt['イベント順序']})">
-                Phase ${evt['イベント順序'] || '?'}: ${evt['イベント名'] || '名称不明'}
-            </button>`;
+        // ★回答済みかチェックするロジック
+        // 現在のログの中に、この部屋名とイベント名の組み合わせがあるか探す
+        const isCompleted = window.currentSessionLog.some(log => 
+            log.room === roomName && log.event === evt['イベント名']
+        );
+
+        if (isCompleted) {
+            // 回答済みの場合：ボタンを無効化（グレーアウト）
+            html += `
+                <button class="select-btn disabled-btn" disabled>
+                    <span class="phase-label">Phase ${evt['イベント順序'] || '?'}</span>
+                    <strong>${evt['イベント名']}</strong> <span class="completed-badge">済</span><br>
+                    <small>対応済みです</small>
+                </button>`;
+        } else {
+            // 未回答の場合：通常ボタン
+            html += `
+                <button class="select-btn" onclick="startScenario(${evt.No}, ${evt['イベント順序']})">
+                    <span class="phase-label">Phase ${evt['イベント順序'] || '?'}</span>
+                    <strong>${evt['イベント名']}</strong><br>
+                    <small style="color:#666;">${(evt['イベント本文']||'').substring(0, 20)}...</small>
+                </button>`;
+        }
     });
     
     html += `<button onclick="closeModal()" class="close-btn">閉じる</button></div>`;
     openModal(html);
 }
 
+// ==========================================
 // 5. シナリオ開始
+// ==========================================
 window.startScenario = function(roomNo, order) {
+    // 再度時間チェック（念のため）
+    if (window.totalTime >= TIME_LIMIT) {
+        closeModal();
+        showHistory();
+        return;
+    }
+
     const targetEvent = window.globalEventData.find(e => e.No == roomNo && e['イベント順序'] == order);
     if (!targetEvent) return;
 
@@ -153,7 +192,7 @@ window.startScenario = function(roomNo, order) {
     const html = `
         <div class="modal-body">
             <h2>${targetEvent['イベント名']}</h2>
-            <p>${targetEvent['イベント本文']}</p>
+            <p style="font-size:1.1em;">${targetEvent['イベント本文']}</p>
             <hr>
             <div>${buttonsHtml}</div>
             <button onclick="closeModal()" class="close-btn">キャンセル</button>
@@ -161,21 +200,24 @@ window.startScenario = function(roomNo, order) {
     openModal(html);
 };
 
-// 6. 選択処理（★ここを修正：時間制限チェック）
+// ==========================================
+// 6. 選択処理（時間制限・強制終了実装）
+// ==========================================
 window.handleChoice = function(roomName, eventName, choiceName, resultText, timeCost) {
     // 時間加算
     window.totalTime += timeCost;
     
+    // 時間表示更新
     const timeEl = document.getElementById('total-time');
     if(timeEl) {
         timeEl.innerText = window.totalTime;
-        // 30分超えたら赤文字にする演出
         if (window.totalTime >= TIME_LIMIT) {
             timeEl.style.color = "red";
             timeEl.style.fontWeight = "bold";
         }
     }
 
+    // ログ保存
     const logEntry = {
         timestamp: new Date().toLocaleString(),
         room: roomName,
@@ -184,32 +226,35 @@ window.handleChoice = function(roomName, eventName, choiceName, resultText, time
         result: resultText,
         timeCost: timeCost
     };
-
     window.currentSessionLog.push(logEntry);
-    
-    // ログ保存・送信
     saveToLocalStorage(logEntry);
     sendToGoogleSheets(logEntry);
 
     // モーダルを閉じる
     closeModal();
 
-    // ★時間経過チェックとゲーム終了判定
+    // ★重要：結果表示とゲーム終了判定
+    // アラートのOKを押した後に判定が走るようにsetTimeoutで少し遅らせる手もあるが、
+    // 即座に判定してアラートを出す方が確実。
+    
     setTimeout(() => {
-        // 先に結果を表示
+        // 1. まず結果を表示
         alert(`【結果】\n${resultText}\n\n経過時間: +${timeCost}分 (合計: ${window.totalTime}分)`);
 
-        // 30分以上なら強制終了
+        // 2. 制限時間チェック
         if (window.totalTime >= TIME_LIMIT) {
+            // 強制終了処理
             alert("【ゲーム終了】\n経過時間が30分を超えました。\nこれ以上の活動はできません。記録画面へ移動します。");
-            showHistory(); // 履歴画面（結果画面）へ飛ばす
+            showHistory(); // 強制遷移
         }
-    }, 100); // 少し遅らせてアラートを出す
+    }, 100);
 };
 
-// データ送信
+// ==========================================
+// 7. ユーティリティ・データ管理
+// ==========================================
 function sendToGoogleSheets(data) {
-    if(GAS_URL.includes("ここに")) return;
+    if(!GAS_URL || GAS_URL.includes("ここに")) return;
     fetch(GAS_URL, {
         method: 'POST',
         mode: 'no-cors',
@@ -218,7 +263,6 @@ function sendToGoogleSheets(data) {
     }).catch(e => console.log("GAS送信エラー:", e));
 }
 
-// 履歴保存
 function saveToLocalStorage(newEntry) {
     try {
         let allHistory = JSON.parse(localStorage.getItem('disasterAppHistory')) || [];
@@ -227,16 +271,24 @@ function saveToLocalStorage(newEntry) {
     } catch(e) { console.error(e); }
 }
 
-// ユーティリティ
+function switchScreen(screenId) {
+    document.querySelectorAll('.screen').forEach(el => {
+        el.classList.remove('active');
+        el.style.display = 'none';
+    });
+    const target = document.getElementById(screenId);
+    if (target) {
+        target.classList.add('active');
+        target.style.display = 'block';
+    }
+}
+
 window.returnToTitle = function() {
     location.reload(); 
 };
 
 window.showHistory = function() {
-    // 画面切り替え
-    document.querySelectorAll('.screen').forEach(el => el.classList.remove('active'));
-    document.getElementById('history-screen').classList.add('active');
-
+    switchScreen('history-screen');
     const listDiv = document.getElementById('history-list');
     const history = JSON.parse(localStorage.getItem('disasterAppHistory')) || [];
     
@@ -246,7 +298,7 @@ window.showHistory = function() {
     }
 
     let html = '<ul>';
-    // 今回のセッションだけでなく、全履歴を表示（または今回の分だけ強調しても良い）
+    // 直近のセッション（今回のプレイ）をわかりやすく表示
     [...history].reverse().forEach(log => {
         html += `
             <li style="border-bottom:1px solid #ddd; padding:10px; margin-bottom:5px; background:#fff;">
@@ -266,13 +318,11 @@ window.exportCSV = function() {
         alert("履歴がありません");
         return;
     }
-    
     let csvContent = "\uFEFF日時,部屋名,イベント名,選択した行動,結果,経過時間\n";
     history.forEach(row => {
         const clean = (t) => t ? `"${String(t).replace(/"/g, '""')}"` : '""';
         csvContent += `${clean(row.timestamp)},${clean(row.room)},${clean(row.event)},${clean(row.choice)},${clean(row.result)},${row.timeCost}\n`;
     });
-
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
